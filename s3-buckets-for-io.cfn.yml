@@ -5,12 +5,12 @@ Parameters:
   ProjectName:
     Description: Set the project name.
     Type: String
-    Default: slhpc
+    Default: io
 Resources:
   InputBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub ${ProjectName}-input-${AWS::AccountId}
       BucketEncryption:
@@ -26,13 +26,15 @@ Resources:
         Status: Enabled
       LifecycleConfiguration:
         Rules:
-          - Id: IntelligentTiering
+          - Id: Move-to-Intelligent-Tiering-after-0day
             Status: Enabled
             Transitions:
               - TransitionInDays: 0
                 StorageClass: INTELLIGENT_TIERING
             NoncurrentVersionExpiration:
               NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-input-${AWS::AccountId}/
@@ -55,20 +57,22 @@ Resources:
         Status: Enabled
       LifecycleConfiguration:
         Rules:
-          - Id: IntelligentTiering
+          - Id: Move-to-Intelligent-Tiering-after-0day
             Status: Enabled
             Transitions:
               - TransitionInDays: 0
                 StorageClass: INTELLIGENT_TIERING
             NoncurrentVersionExpiration:
               NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-reference-${AWS::AccountId}/
   OutputBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub ${ProjectName}-output-${AWS::AccountId}
       BucketEncryption:
@@ -84,7 +88,7 @@ Resources:
         Status: Enabled
       LifecycleConfiguration:
         Rules:
-          - Id: IntelligentTiering
+          - Id: Move-to-Intelligent-Tiering-after-0day
             Status: Enabled
             Transitions:
               - TransitionInDays: 0
@@ -92,13 +96,15 @@ Resources:
             # ExpirationInDays: 14
             NoncurrentVersionExpiration:
               NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-output-${AWS::AccountId}/
   ArchiveBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub ${ProjectName}-archive-${AWS::AccountId}
       BucketEncryption:
@@ -114,7 +120,7 @@ Resources:
         Status: Enabled
       LifecycleConfiguration:
         Rules:
-          - Id: Glacier
+          - Id: Move-to-Glacier-Instant-Retrieval-after-14day
             Status: Enabled
             Transitions:
               - TransitionInDays: 0
@@ -123,13 +129,15 @@ Resources:
                 StorageClass: GLACIER_IR
             NoncurrentVersionExpiration:
               NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-archive-${AWS::AccountId}/
   AccessLogBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub ${ProjectName}-log-${AWS::AccountId}
       BucketEncryption:
@@ -143,13 +151,15 @@ Resources:
         RestrictPublicBuckets: true
       LifecycleConfiguration:
         Rules:
-          - Id: IntelligentTiering
+          - Id: Move-to-Intelligent-Tiering-after-0day
             Status: Enabled
             Transitions:
               - TransitionInDays: 0
                 StorageClass: INTELLIGENT_TIERING
             NoncurrentVersionExpiration:
               NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
 Outputs:
   InputBucket:
     Value: !Ref InputBucket
