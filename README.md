@@ -20,5 +20,6 @@ Installation
 3.  Deploy S3 stacks.
 
     ```sh
-    $ rain deploy s3-buckets-for-io.cfn.yml s3-buckets-for-io
+    $ rain deploy \
+        s3-buckets-with-access-logger.cfn.yml s3-buckets-with-access-logger
     ```
