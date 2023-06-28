@@ -38,10 +38,15 @@ Resources:
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-input-${AWS::AccountId}/
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-input-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
   ReferenceBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub ${ProjectName}-reference-${AWS::AccountId}
       BucketEncryption:
@@ -69,6 +74,11 @@ Resources:
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-reference-${AWS::AccountId}/
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-reference-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
   OutputBucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
@@ -101,6 +111,11 @@ Resources:
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-output-${AWS::AccountId}/
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-output-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
   ArchiveBucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
@@ -134,6 +149,11 @@ Resources:
       LoggingConfiguration:
         DestinationBucketName: !Ref AccessLogBucket
         LogFilePrefix: !Sub ${ProjectName}-archive-${AWS::AccountId}/
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-archive-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
   AccessLogBucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
@@ -160,6 +180,11 @@ Resources:
               NoncurrentDays: 7
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-log-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
 Outputs:
   InputBucket:
     Value: !Ref InputBucket
