@@ -25,15 +25,6 @@ Resources:
               - backup:StartRestoreJob
               - backup:UpdateRecoveryPointLifecycle
             Resource: '*'
-      # EncryptionKeyArn: String
-      # LockConfiguration:
-      #   ChangeableForDays: Integer
-      #   MaxRetentionDays: Integer
-      #   MinRetentionDays: Integer
-      # Notifications:
-      #   BackupVaultEvents:
-      #     - String
-      #   SNSTopicArn: String
       BackupVaultTags:
         Name: !Sub ${ProjectName}-s3-backup-vault
         ProjectName: !Ref ProjectName
@@ -51,9 +42,6 @@ Resources:
             CompletionWindowMinutes: 10080
             Lifecycle:
               DeleteAfterDays: 35
-      #   AdvancedBackupSettings: # Optional
-      #     - BackupOptions: Json
-      #       ResourceType: String
       BackupPlanTags:
         Name: !Sub ${ProjectName}-s3-backup-plan
         ProjectName: !Ref ProjectName
@@ -64,45 +52,16 @@ Resources:
       BackupSelection:
         SelectionName: !Sub ${ProjectName}-s3-backup-selection
         IamRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup
+        Resources:
+          - !Sub arn:aws:s3:::*
         # ListOfTags:
         #   - ConditionKey: ProjectName
         #     ConditionType: STRINGEQUALS
         #     ConditionValue: !Ref ProjectName
-        Resources:
-          - !GetAtt S3Bucket.Arn
-  S3Bucket:
-    Type: AWS::S3::Bucket
-    # DeletionPolicy: Retain
-    # UpdateReplacePolicy: Retain
-    Properties:
-      BucketName: !Sub ${ProjectName}-${AWS::Region}-${AWS::AccountId}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: Move-to-Intelligent-Tiering-after-0day
-            Status: Enabled
-            Transitions:
-              - TransitionInDays: 0
-                StorageClass: INTELLIGENT_TIERING
-            NoncurrentVersionExpiration:
-              NoncurrentDays: 7
-            AbortIncompleteMultipartUpload:
-              DaysAfterInitiation: 7
-      Tags:
-        - Key: Name
-          Value: !Sub ${ProjectName}-${AWS::Region}-${AWS::AccountId}
-        - Key: ProjectName
-          Value: !Ref ProjectName
+        Conditions:
+          StringEquals:
+            - ConditionKey: aws:ResourceTag/ProjectName
+              ConditionValue: !Ref ProjectName
 Outputs:
   BackupVault:
     Value: !Ref BackupVault
@@ -116,7 +75,3 @@ Outputs:
     Value: !Ref BackupSelection
     Export:
       Name: !Sub ${AWS::Region}-${AWS::StackName}-BackupSelection
-  S3Bucket:
-    Value: !Ref S3Bucket
-    Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-S3Bucket

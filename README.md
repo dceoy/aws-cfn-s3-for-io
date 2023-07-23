@@ -23,3 +23,10 @@ Installation
     $ rain deploy \
         s3-buckets-with-access-logger.cfn.yml s3-buckets-with-access-logger
     ```
+
+4.  Deploy Backup stacks.
+
+    ```sh
+    $ rain deploy \
+        backup-for-project-s3-buckets.cfn.yml backup-for-project-s3-buckets
+    ```
