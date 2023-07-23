@@ -1,0 +1,129 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Backup for S3 buckets
+Parameters:
+  ProjectName:
+    Description: Set the project name.
+    Type: String
+    Default: io
+#   S3StackName:
+#     Description: Set the S3 stack name.
+#     Type: String
+#     Default: s3-buckets-with-access-logger
+Resources:
+  BackupVault:
+    Type: AWS::Backup::BackupVault
+    Properties:
+      BackupVaultName: !Sub ${ProjectName}-s3-backup-vault
+      AccessPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Deny
+            Principal:
+              AWS: '*'
+            Action:
+              - backup:DeleteBackupVault
+              - backup:DeleteBackupVaultAccessPolicy
+              - backup:DeleteRecoveryPoint
+              - backup:StartCopyJob
+              - backup:StartRestoreJob
+              - backup:UpdateRecoveryPointLifecycle
+            Resource: '*'
+      # EncryptionKeyArn: String
+      # LockConfiguration:
+      #   ChangeableForDays: Integer
+      #   MaxRetentionDays: Integer
+      #   MinRetentionDays: Integer
+      # Notifications:
+      #   BackupVaultEvents:
+      #     - String
+      #   SNSTopicArn: String
+      BackupVaultTags:
+        Name: !Sub ${ProjectName}-s3-backup-vault
+        ProjectName: !Ref ProjectName
+  BackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Sub ${ProjectName}-s3-backup-plan
+        BackupPlanRule:
+          - RuleName: !Sub ${ProjectName}-s3-backup-rule
+            TargetBackupVault: !Ref BackupVault
+            EnableContinuousBackup: true
+            ScheduleExpression: cron(0 5 * * ? *)
+            StartWindowMinutes: 480
+            CompletionWindowMinutes: 10080
+            Lifecycle:
+              DeleteAfterDays: 35
+      #   AdvancedBackupSettings: # Optional
+      #     - BackupOptions: Json
+      #       ResourceType: String
+      BackupPlanTags:
+        Name: !Sub ${ProjectName}-s3-backup-plan
+        ProjectName: !Ref ProjectName
+  BackupSelection:
+    Type: AWS::Backup::BackupSelection
+    Properties:
+      BackupPlanId: !Ref BackupPlan
+      BackupSelection:
+        SelectionName: !Sub ${ProjectName}-s3-backup-selection
+        IamRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup
+        # ListOfTags:
+        #   - ConditionKey: ProjectName
+        #     ConditionType: STRINGEQUALS
+        #     ConditionValue: !Ref ProjectName
+        # Conditions:
+        #   StringEquals:
+        #     aws:ResourceTag/ProjectName: !Ref ProjectName
+        Resources:
+          - !GetAtt S3Bucket.Arn
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub ${ProjectName}-${AWS::Region}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: Move-to-Intelligent-Tiering-after-0day
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 0
+                StorageClass: INTELLIGENT_TIERING
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${AWS::Region}-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
+Outputs:
+  BackupVault:
+    Value: !Ref BackupVault
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-BackupVault
+  BackupPlan:
+    Value: !Ref BackupPlan
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-BackupPlan
+  BackupSelection:
+    Value: !Ref BackupSelection
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-BackupSelection
+  S3Bucket:
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-S3Bucket
