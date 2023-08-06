@@ -103,6 +103,10 @@ Resources:
         #     ConditionValue: !Ref ProjectName
         Resources:
           - !GetAtt S3Bucket.Arn
+          - Fn::Join:
+              - ''
+              - - !GetAtt S3Bucket.Arn
+                - /*
 Outputs:
   S3Bucket:
     Value: !Ref S3Bucket

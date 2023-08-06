@@ -53,15 +53,15 @@ Resources:
         SelectionName: !Sub ${ProjectName}-s3-backup-selection
         IamRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup
         Resources:
-          - arn:aws:s3:::*
+          - !Sub arn:aws:s3:::${ProjectName}-*
         # ListOfTags:
         #   - ConditionKey: ProjectName
         #     ConditionType: STRINGEQUALS
         #     ConditionValue: !Ref ProjectName
-        Conditions:
-          StringEquals:
-            - ConditionKey: aws:ResourceTag/ProjectName
-              ConditionValue: !Ref ProjectName
+        # Conditions:
+        #   StringEquals:
+        #     - ConditionKey: aws:ResourceTag/ProjectName
+        #       ConditionValue: !Ref ProjectName
 Outputs:
   BackupVault:
     Value: !Ref BackupVault
