@@ -18,11 +18,11 @@ Resources:
             Principal:
               AWS: '*'
             Action:
-              - backup:DeleteBackupVault
+              # - backup:DeleteBackupVault
               - backup:DeleteBackupVaultAccessPolicy
               - backup:DeleteRecoveryPoint
               - backup:StartCopyJob
-              - backup:StartRestoreJob
+              # - backup:StartRestoreJob
               - backup:UpdateRecoveryPointLifecycle
             Resource: '*'
       BackupVaultTags:
@@ -51,17 +51,39 @@ Resources:
       BackupPlanId: !Ref BackupPlan
       BackupSelection:
         SelectionName: !Sub ${ProjectName}-s3-backup-selection
-        IamRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup
+        IamRoleArn: !GetAtt S3BackupServiceRole.Arn
         Resources:
-          - !Sub arn:aws:s3:::${ProjectName}-*
+          - arn:aws:s3:::*
         # ListOfTags:
         #   - ConditionKey: ProjectName
         #     ConditionType: STRINGEQUALS
         #     ConditionValue: !Ref ProjectName
-        # Conditions:
-        #   StringEquals:
-        #     - ConditionKey: aws:ResourceTag/ProjectName
-        #       ConditionValue: !Ref ProjectName
+        Conditions:
+          StringEquals:
+            - ConditionKey: aws:ResourceTag/ProjectName
+              ConditionValue: !Ref ProjectName
+  S3BackupServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-S3BackupServiceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - backup.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup
+        - arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-S3BackupServiceRole
+        - Key: ProjectName
+          Value: !Ref ProjectName
 Outputs:
   BackupVault:
     Value: !Ref BackupVault
@@ -75,3 +97,7 @@ Outputs:
     Value: !Ref BackupSelection
     Export:
       Name: !Sub ${AWS::Region}-${AWS::StackName}-BackupSelection
+  S3BackupServiceRoleArn:
+    Value: !GetAtt S3BackupServiceRole.Arn
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-S3BackupServiceRoleArn
