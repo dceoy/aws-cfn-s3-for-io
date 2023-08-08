@@ -18,11 +18,11 @@ Resources:
             Principal:
               AWS: '*'
             Action:
-              # - backup:DeleteBackupVault
+              - backup:DeleteBackupVault
               - backup:DeleteBackupVaultAccessPolicy
               - backup:DeleteRecoveryPoint
               - backup:StartCopyJob
-              # - backup:StartRestoreJob
+              - backup:StartRestoreJob
               - backup:UpdateRecoveryPointLifecycle
             Resource: '*'
       BackupVaultTags:
