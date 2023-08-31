@@ -1,0 +1,179 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: DataSync with a destination S3 bucket
+Parameters:
+  ProjectName:
+    Description: Set the project name.
+    Type: String
+    Default: io
+  S3StackName:
+    Description: Set the S3 stack name.
+    Type: String
+    Default: s3-bucket-for-project
+  S3StorageClass:
+    Description: Set the destination S3 storage class.
+    Type: String
+    Default: GLACIER_INSTANT_RETRIEVAL
+Resources:
+  ArchiveS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${ProjectName}-archive-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: Move-to-Glacier-Instant-Retrieval-after-14day
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 0
+                StorageClass: INTELLIGENT_TIERING
+              - TransitionInDays: 14
+                StorageClass: GLACIER_IR
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-archive-${AWS::AccountId}
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  SourceDataSyncLocationS3:
+    Type: AWS::DataSync::LocationS3
+    Properties:
+      S3BucketArn:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:s3:::'
+            - Fn::ImportValue: !Sub ${AWS::Region}-${S3StackName}-S3Bucket
+      S3Config:
+        BucketAccessRoleArn: !GetAtt S3DataSyncRole.Arn
+      Subdirectory: /
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-source-datasync-location-s3
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  DestinationDataSyncLocationS3:
+    Type: AWS::DataSync::LocationS3
+    Properties:
+      S3BucketArn: !GetAtt ArchiveS3Bucket.Arn
+      S3Config:
+        BucketAccessRoleArn: !GetAtt S3DataSyncRole.Arn
+      Subdirectory:
+        Fn::Join:
+          - ''
+          - - /
+            - Fn::ImportValue: !Sub ${AWS::Region}-${S3StackName}-S3Bucket
+      S3StorageClass: !Ref S3StorageClass
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-destination-datasync-location-s3
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  S3DataSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-S3DataSyncRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: datasync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${ProjectName}-s3-read-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                Resource:
+                  - Fn::Join:
+                      - ''
+                      - - 'arn:aws:s3:::'
+                        - Fn::ImportValue: !Sub ${AWS::Region}-${S3StackName}-S3Bucket
+                  - Fn::Join:
+                      - ''
+                      - - 'arn:aws:s3:::'
+                        - Fn::ImportValue: !Sub ${AWS::Region}-${S3StackName}-S3Bucket
+                        - /*
+        - PolicyName: !Sub ${ProjectName}-s3-write-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - Fn::Join:
+                      - ''
+                      - - !GetAtt ArchiveS3Bucket.Arn
+                        - /*
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-S3DataSyncRole
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  S3DataSyncTask:
+    Type: AWS::DataSync::Task
+    Properties:
+      Name: !Sub ${ProjectName}-s3-datasync-task
+      SourceLocationArn: !GetAtt SourceDataSyncLocationS3.LocationArn
+      DestinationLocationArn: !GetAtt DestinationDataSyncLocationS3.LocationArn
+      CloudWatchLogGroupArn: !GetAtt S3DataSyncLogGroup.Arn
+      Schedule:
+        ScheduleExpression: cron(0 5 * * ? *)
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-datasync-task
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  S3DataSyncLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/datasync/${ProjectName}-s3-datasync-task
+      RetentionInDays: 14
+      Tags:
+        - Key: Name
+          Value: !Sub /aws/datasync/${ProjectName}-s3-datasync-task
+        - Key: ProjectName
+          Value: !Ref ProjectName
+Outputs:
+  ArchiveS3Bucket:
+    Value: !Ref ArchiveS3Bucket
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-ArchiveS3Bucket
+  SourceDataSyncLocationS3Arn:
+    Value: !GetAtt SourceDataSyncLocationS3.LocationArn
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-SourceDataSyncLocationS3Arn
+  DestinationDataSyncLocationS3Arn:
+    Value: !GetAtt DestinationDataSyncLocationS3.LocationArn
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-DestinationDataSyncLocationS3Arn
+  S3DataSyncRoleArn:
+    Value: !GetAtt S3DataSyncRole.Arn
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-S3DataSyncRoleArn
+  S3DataSyncTask:
+    Value: !Ref S3DataSyncTask
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-S3DataSyncTask
+  S3DataSyncLogGroup:
+    Value: !Ref S3DataSyncLogGroup
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-S3DataSyncLogGroup
