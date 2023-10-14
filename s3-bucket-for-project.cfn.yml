@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: S3 bucket and Backup
+Description: S3 bucket
 Parameters:
   ProjectName:
     Description: Set the project name.
@@ -40,7 +40,7 @@ Resources:
       #     - ObjectOwnership: BucketOwnerPreferred
       Tags:
         - Key: Name
-          Value: !Sub ${ProjectName}-${AWS::Region}-${AWS::AccountId}
+          Value: !Sub ${ProjectName}-main-${AWS::AccountId}
         - Key: ProjectName
           Value: !Ref ProjectName
 Outputs:

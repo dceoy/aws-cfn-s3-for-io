@@ -1,13 +1,25 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: S3 buckets for batch I/O
+Description: S3 buckets for I/O
 Parameters:
   ProjectName:
     Description: Set the project name.
     Type: String
     Default: io
+  EnableS3AccessLogging:
+    Description: Enable S3 access logging.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+Conditions:
+  CreateAccessLogS3Bucket:
+    Fn::Equals:
+      - !Ref EnableS3AccessLogging
+      - 'true'
 Resources:
-  InputBucket:
+  InputS3Bucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     # UpdateReplacePolicy: Retain
@@ -36,14 +48,17 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
       LoggingConfiguration:
-        DestinationBucketName: !Ref AccessLogBucket
-        LogFilePrefix: !Sub ${ProjectName}-input-${AWS::AccountId}/
+        Fn::If:
+          - CreateAccessLogS3Bucket
+          - DestinationBucketName: !Ref AccessLogS3Bucket
+            LogFilePrefix: !Sub ${ProjectName}-input-${AWS::AccountId}/
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-input-${AWS::AccountId}
         - Key: ProjectName
           Value: !Ref ProjectName
-  ReferenceBucket:
+  ReferenceS3Bucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     # UpdateReplacePolicy: Retain
@@ -72,14 +87,17 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
       LoggingConfiguration:
-        DestinationBucketName: !Ref AccessLogBucket
-        LogFilePrefix: !Sub ${ProjectName}-reference-${AWS::AccountId}/
+        Fn::If:
+          - CreateAccessLogS3Bucket
+          - DestinationBucketName: !Ref AccessLogS3Bucket
+            LogFilePrefix: !Sub ${ProjectName}-reference-${AWS::AccountId}/
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-reference-${AWS::AccountId}
         - Key: ProjectName
           Value: !Ref ProjectName
-  OutputBucket:
+  OutputS3Bucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     # UpdateReplacePolicy: Retain
@@ -109,14 +127,17 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
       LoggingConfiguration:
-        DestinationBucketName: !Ref AccessLogBucket
-        LogFilePrefix: !Sub ${ProjectName}-output-${AWS::AccountId}/
+        Fn::If:
+          - CreateAccessLogS3Bucket
+          - DestinationBucketName: !Ref AccessLogS3Bucket
+            LogFilePrefix: !Sub ${ProjectName}-output-${AWS::AccountId}/
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-output-${AWS::AccountId}
         - Key: ProjectName
           Value: !Ref ProjectName
-  ArchiveBucket:
+  ArchiveS3Bucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     # UpdateReplacePolicy: Retain
@@ -147,15 +168,19 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
       LoggingConfiguration:
-        DestinationBucketName: !Ref AccessLogBucket
-        LogFilePrefix: !Sub ${ProjectName}-archive-${AWS::AccountId}/
+        Fn::If:
+          - CreateAccessLogS3Bucket
+          - DestinationBucketName: !Ref AccessLogS3Bucket
+            LogFilePrefix: !Sub ${ProjectName}-archive-${AWS::AccountId}/
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-archive-${AWS::AccountId}
         - Key: ProjectName
           Value: !Ref ProjectName
-  AccessLogBucket:
+  AccessLogS3Bucket:
     Type: AWS::S3::Bucket
+    Condition: CreateAccessLogS3Bucket
     # DeletionPolicy: Retain
     # UpdateReplacePolicy: Retain
     Properties:
@@ -186,23 +211,27 @@ Resources:
         - Key: ProjectName
           Value: !Ref ProjectName
 Outputs:
-  InputBucket:
-    Value: !Ref InputBucket
+  InputS3Bucket:
+    Value: !Ref InputS3Bucket
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-InputBucket
-  ReferenceBucket:
-    Value: !Ref ReferenceBucket
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-InputS3Bucket
+  ReferenceS3Bucket:
+    Value: !Ref ReferenceS3Bucket
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-ReferenceBucket
-  OutputBucket:
-    Value: !Ref OutputBucket
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-ReferenceS3Bucket
+  OutputS3Bucket:
+    Value: !Ref OutputS3Bucket
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-OutputBucket
-  ArchiveBucket:
-    Value: !Ref ArchiveBucket
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-OutputS3Bucket
+  ArchiveS3Bucket:
+    Value: !Ref ArchiveS3Bucket
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-ArchiveBucket
-  AccessLogBucket:
-    Value: !Ref AccessLogBucket
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-ArchiveS3Bucket
+  AccessLogS3Bucket:
+    Value:
+      Fn::If:
+        - CreateAccessLogS3Bucket
+        - !Ref AccessLogS3Bucket
+        - 'null'
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-AccessLogBucket
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-AccessLogS3Bucket
